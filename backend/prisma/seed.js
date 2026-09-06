@@ -409,6 +409,161 @@ const topicData = [
   },
 ];
 
+// ---------- Subjective / Mock Interview questions ----------
+// Technical questions attach to existing topics; HR/Behavioral questions
+// attach to a "General" topic created per role.
+const subjectiveData = [
+  {
+    roleName: "SDE",
+    topicName: "DSA",
+    type: "TECHNICAL",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "Explain how you would design an LRU (Least Recently Used) cache. What data structures would you use and why?",
+    idealAnswer:
+      "An LRU cache is typically built with a hash map (for O(1) key lookups) combined with a doubly linked list (to track usage order in O(1)). On access, the accessed node is moved to the front of the list. On insert past capacity, the node at the tail (least recently used) is evicted.",
+  },
+  {
+    roleName: "SDE",
+    topicName: "DBMS",
+    type: "TECHNICAL",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "Walk me through how you would diagnose and optimize a SQL query that has become slow on a table with millions of rows.",
+    idealAnswer:
+      "Start by running EXPLAIN/EXPLAIN ANALYZE to see the query plan. Check whether indexes exist on WHERE/JOIN/ORDER BY columns. Avoid SELECT * to reduce I/O. Consider whether the query is doing a full table scan and whether an index or a rewritten query (e.g. replacing a correlated subquery with a JOIN) would help. For very large tables, consider partitioning.",
+  },
+  {
+    roleName: "SDE",
+    topicName: "General",
+    type: "HR",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "Tell me about a time you disagreed with a teammate's technical decision. How did you handle it?",
+    idealAnswer: null,
+  },
+  {
+    roleName: "SDE",
+    topicName: "General",
+    type: "BEHAVIORAL",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "Describe a challenging bug you fixed. What was your debugging process?",
+    idealAnswer: null,
+  },
+  {
+    roleName: "Data Analyst",
+    topicName: "SQL",
+    type: "TECHNICAL",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "How would you find the second-highest salary in an employee table using SQL?",
+    idealAnswer:
+      "One common approach: SELECT MAX(salary) FROM employees WHERE salary < (SELECT MAX(salary) FROM employees). Alternatively, use DENSE_RANK() in a window function and filter for rank = 2, which handles ties more explicitly.",
+  },
+  {
+    roleName: "Data Analyst",
+    topicName: "General",
+    type: "HR",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "Tell me about a time your analysis directly changed a business decision.",
+    idealAnswer: null,
+  },
+  {
+    roleName: "Data Analyst",
+    topicName: "General",
+    type: "BEHAVIORAL",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "Describe a time you had to explain a complex data finding to a non-technical stakeholder.",
+    idealAnswer: null,
+  },
+  {
+    roleName: "Frontend Developer",
+    topicName: "JavaScript",
+    type: "TECHNICAL",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "How would you go about optimizing a React app that's re-rendering too often?",
+    idealAnswer:
+      "Identify unnecessary re-renders with the React DevTools Profiler. Common fixes: memoize components with React.memo, memoize expensive computations with useMemo, memoize callbacks with useCallback, avoid creating new object/array literals in render, split large components into smaller ones, and ensure keys are stable in lists.",
+  },
+  {
+    roleName: "Frontend Developer",
+    topicName: "General",
+    type: "HR",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "Tell me about a time you received difficult feedback on your code. How did you respond?",
+    idealAnswer: null,
+  },
+  {
+    roleName: "Frontend Developer",
+    topicName: "General",
+    type: "BEHAVIORAL",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "Describe a UI bug that was hard to reproduce. How did you eventually track it down?",
+    idealAnswer: null,
+  },
+  {
+    roleName: "Product Manager",
+    topicName: "Product Sense",
+    type: "TECHNICAL",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "Walk me through how you'd decide whether to build a new feature requested by one major client.",
+    idealAnswer:
+      "A strong answer weighs: how many other users/segments would benefit (not just one client), the strategic fit with the roadmap, the engineering effort/cost, and the revenue or retention risk of saying no. Often the right move is to solve the underlying need in a generalizable way rather than building a one-off feature for a single client.",
+  },
+  {
+    roleName: "Product Manager",
+    topicName: "General",
+    type: "HR",
+    difficulty: "INTERMEDIATE",
+    questionText: "Tell me about a time you had to say no to a stakeholder.",
+    idealAnswer: null,
+  },
+  {
+    roleName: "Product Manager",
+    topicName: "General",
+    type: "BEHAVIORAL",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "Describe a product launch that didn't go as planned. What did you learn from it?",
+    idealAnswer: null,
+  },
+  {
+    roleName: "Consulting",
+    topicName: "Case Fundamentals",
+    type: "TECHNICAL",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "A client's e-commerce conversion rate has dropped 20% in the last quarter. How would you structure your analysis?",
+    idealAnswer:
+      "A structured approach would break the funnel into stages (traffic → product page → cart → checkout → purchase) and isolate where the drop is concentrated. Then investigate internal factors (site changes, pricing, page load speed, checkout flow changes) versus external factors (seasonality, competitor moves, traffic source mix) before recommending next steps.",
+  },
+  {
+    roleName: "Consulting",
+    topicName: "General",
+    type: "HR",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "Tell me about a time you had to work with incomplete information to make a recommendation.",
+    idealAnswer: null,
+  },
+  {
+    roleName: "Consulting",
+    topicName: "General",
+    type: "BEHAVIORAL",
+    difficulty: "INTERMEDIATE",
+    questionText:
+      "Describe a time you had to persuade a client or stakeholder to accept a recommendation they were initially resistant to.",
+    idealAnswer: null,
+  },
+];
+
 async function main() {
   for (const role of roles) {
     await prisma.role.upsert({
@@ -447,6 +602,42 @@ async function main() {
   }
 
   console.log(`Seeded ${topicCount} topics and ${questionCount} MCQ questions.`);
+
+  // ---------- Subjective / Mock Interview questions ----------
+  let subjectiveTopicCount = 0;
+  let subjectiveQuestionCount = 0;
+
+  for (const s of subjectiveData) {
+    const role = await prisma.role.findUnique({ where: { name: s.roleName } });
+    if (!role) continue;
+
+    const topic = await prisma.topic.upsert({
+      where: { name_roleId: { name: s.topicName, roleId: role.id } },
+      update: {},
+      create: { name: s.topicName, roleId: role.id },
+    });
+    subjectiveTopicCount++;
+
+    const existing = await prisma.subjectiveQuestion.findFirst({
+      where: { topicId: topic.id, questionText: s.questionText },
+    });
+    if (existing) continue;
+
+    await prisma.subjectiveQuestion.create({
+      data: {
+        topicId: topic.id,
+        type: s.type,
+        difficulty: s.difficulty,
+        questionText: s.questionText,
+        idealAnswer: s.idealAnswer,
+      },
+    });
+    subjectiveQuestionCount++;
+  }
+
+  console.log(
+    `Seeded ${subjectiveQuestionCount} subjective/mock-interview questions across ${subjectiveTopicCount} topic entries.`
+  );
 }
 
 main()
