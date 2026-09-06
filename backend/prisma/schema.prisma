@@ -1,0 +1,144 @@
+// ==========================================
+// Interview Arena - Prisma Schema
+// PostgreSQL
+// ==========================================
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  mcqAttempts       MCQAttempt[]
+  interviewSessions MockInterviewSession[]
+}
+
+model Role {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  topics            Topic[]
+  interviewSessions MockInterviewSession[]
+}
+
+model Topic {
+  id     String @id @default(cuid())
+  name   String
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  mcqQuestions        MCQQuestion[]
+  subjectiveQuestions SubjectiveQuestion[]
+
+  @@unique([name, roleId])
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model MCQQuestion {
+  id            String     @id @default(cuid())
+  topicId       String
+  topic         Topic      @relation(fields: [topicId], references: [id])
+  difficulty    Difficulty
+  questionText  String
+  optionA       String
+  optionB       String
+  optionC       String
+  optionD       String
+  correctOption String
+  explanation   String?
+
+  attempts MCQAttempt[]
+}
+
+model MCQAttempt {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  questionId     String
+  question       MCQQuestion @relation(fields: [questionId], references: [id])
+  selectedOption String
+  isCorrect      Boolean
+  timeTakenSec   Int?
+  attemptedAt    DateTime    @default(now())
+}
+
+enum QuestionType {
+  TECHNICAL
+  HR
+  BEHAVIORAL
+}
+
+model SubjectiveQuestion {
+  id           String       @id @default(cuid())
+  topicId      String
+  topic        Topic        @relation(fields: [topicId], references: [id])
+  type         QuestionType
+  difficulty   Difficulty
+  questionText String
+  idealAnswer  String?
+
+  responses InterviewResponse[]
+}
+
+model MockInterviewSession {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  roleId    String
+  role      Role      @relation(fields: [roleId], references: [id])
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  responses InterviewResponse[]
+}
+
+enum QualityLabel {
+  GOOD
+  AVERAGE
+  WEAK
+}
+
+model InterviewResponse {
+  id                String               @id @default(cuid())
+  sessionId         String
+  session           MockInterviewSession @relation(fields: [sessionId], references: [id])
+  questionId        String
+  question          SubjectiveQuestion   @relation(fields: [questionId], references: [id])
+  answerText        String
+  llmFeedback       String?
+  mlQualityLabel    QualityLabel?
+  mlConfidenceScore Float?
+  createdAt         DateTime             @default(now())
+}
+
+// Future / stretch models (schema kept ready, not wired into MVP UI)
+model LeaderboardEntry {
+  id         String @id @default(cuid())
+  userId     String @unique
+  totalScore Int    @default(0)
+  rank       Int?
+}
+
+model PracticeStreak {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  currentStreak Int       @default(0)
+  longestStreak Int       @default(0)
+  lastPracticed DateTime?
+}
