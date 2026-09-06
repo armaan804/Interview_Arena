@@ -62,6 +62,7 @@ model MCQQuestion {
   optionD       String
   correctOption String
   explanation   String?
+  isAIGenerated Boolean    @default(false)
 
   attempts MCQAttempt[]
 }

@@ -59,6 +59,9 @@ export default function MCQPracticeSession({
   const [phase, setPhase] = useState<"practice" | "review">("practice");
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
   const [error, setError] = useState("");
+  const [loadingBonus, setLoadingBonus] = useState(false);
+  const [bonusError, setBonusError] = useState("");
+  const [isBonusRound, setIsBonusRound] = useState(false);
 
   const currentQuestion = queue[currentIndex];
 
@@ -128,6 +131,38 @@ export default function MCQPracticeSession({
     setSelected(null);
     setResult(null);
     setPhase("practice");
+    setIsBonusRound(false);
+  }
+
+  async function getBonusQuestions() {
+    setLoadingBonus(true);
+    setBonusError("");
+    try {
+      const res = await fetch(`${API_URL}/api/mcq/bonus/${topicId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ count: 5 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBonusError(data.error || "Failed to generate bonus questions.");
+        return;
+      }
+      setQueue(data.questions);
+      setAnswered([]);
+      setCurrentIndex(0);
+      setSelected(null);
+      setResult(null);
+      setPhase("practice");
+      setIsBonusRound(true);
+    } catch {
+      setBonusError("Could not reach the server. Please try again.");
+    } finally {
+      setLoadingBonus(false);
+    }
   }
 
   // ---------- Review screen ----------
@@ -142,25 +177,43 @@ export default function MCQPracticeSession({
         <div className="max-w-2xl mx-auto">
           <h1 className="text-2xl font-semibold text-gray-900 mb-1">
             Session complete — {topicName}
+            {isBonusRound && (
+              <span className="ml-2 align-middle text-xs font-medium bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                AI Bonus Round
+              </span>
+            )}
           </h1>
           <p className="text-sm text-gray-500 mb-6">{roleName}</p>
 
-          <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6 flex items-center justify-between">
+          <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6 flex items-center justify-between flex-wrap gap-3">
             <div>
               <p className="text-3xl font-semibold text-gray-900">
                 {correctCount}/{total}
               </p>
               <p className="text-sm text-gray-500">{accuracy}% accuracy</p>
             </div>
-            {wrongAnswers.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {wrongAnswers.length > 0 && (
+                <button
+                  onClick={retryWrongOnly}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700"
+                >
+                  Retry wrong questions ({wrongAnswers.length})
+                </button>
+              )}
               <button
-                onClick={retryWrongOnly}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700"
+                onClick={getBonusQuestions}
+                disabled={loadingBonus}
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
               >
-                Retry wrong questions ({wrongAnswers.length})
+                {loadingBonus ? "Generating..." : "Get 5 bonus AI questions"}
               </button>
-            )}
+            </div>
           </div>
+
+          {bonusError && (
+            <p className="text-sm text-red-600 mb-4">{bonusError}</p>
+          )}
 
           {wrongAnswers.length > 0 && (
             <div className="space-y-4 mb-6">
