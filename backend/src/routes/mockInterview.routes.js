@@ -2,6 +2,7 @@ const express = require("express");
 const { prisma } = require("../lib/prisma");
 const { requireAuth } = require("../middleware/requireAuth");
 const { evaluateInterviewAnswer } = require("../lib/llm");
+const { scoreAnswerQuality } = require("../lib/mlService");
 
 const router = express.Router();
 
@@ -119,10 +120,18 @@ router.post("/finish", requireAuth, async (req, res) => {
 
     const results = [];
 
-    for (const response of responses) {
+    for (let i = 0; i < responses.length; i++) {
+      const response = responses[i];
       const question = response.question;
       let feedback;
       let rating;
+
+      // Space out requests to stay under Gemini's free-tier rate limit.
+      // Without this, only the first call in the loop succeeds and the
+      // rest get 429'd before the retry logic can recover.
+      if (i > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+      }
 
       try {
         const evalResult = await evaluateInterviewAnswer({
@@ -141,9 +150,17 @@ router.post("/finish", requireAuth, async (req, res) => {
         rating = null;
       }
 
+      // Second opinion from our own trained ML model — independent of the
+      // LLM. Failure here is non-fatal; the interview still completes.
+      const mlResult = await scoreAnswerQuality(response.answerText, question.idealAnswer);
+
       await prisma.interviewResponse.update({
         where: { id: response.id },
-        data: { llmFeedback: feedback },
+        data: {
+          llmFeedback: feedback,
+          mlQualityLabel: mlResult?.qualityLabel || null,
+          mlConfidenceScore: mlResult?.confidenceScore ?? null,
+        },
       });
 
       results.push({
@@ -153,6 +170,8 @@ router.post("/finish", requireAuth, async (req, res) => {
         answerText: response.answerText,
         feedback,
         rating,
+        mlQualityLabel: mlResult?.qualityLabel || null,
+        mlConfidenceScore: mlResult?.confidenceScore ?? null,
       });
     }
 

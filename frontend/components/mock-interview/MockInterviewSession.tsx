@@ -15,6 +15,8 @@ interface InterviewQuestion {
   difficulty: Difficulty;
 }
 
+type MLLabel = "GOOD" | "AVERAGE" | "WEAK" | null;
+
 interface ResultRecord {
   questionId: string;
   questionText: string;
@@ -22,7 +24,15 @@ interface ResultRecord {
   answerText: string;
   feedback: string;
   rating: Rating;
+  mlQualityLabel: MLLabel;
+  mlConfidenceScore: number | null;
 }
+
+const ML_LABEL_STYLES: Record<string, string> = {
+  GOOD: "bg-green-50 text-green-700 border border-green-200",
+  AVERAGE: "bg-yellow-50 text-yellow-700 border border-yellow-200",
+  WEAK: "bg-red-50 text-red-700 border border-red-200",
+};
 
 const TYPE_STYLES: Record<QuestionType, string> = {
   TECHNICAL: "bg-blue-100 text-blue-700",
@@ -137,7 +147,8 @@ export default function MockInterviewSession({
             Evaluating your interview answers...
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            This can take a few seconds for {questions.length} questions.
+            This can take up to {questions.length * 5} seconds for{" "}
+            {questions.length} questions — hang tight.
           </p>
         </div>
       </div>
@@ -203,18 +214,35 @@ export default function MockInterviewSession({
                 <p className="text-sm text-gray-600 mb-2 italic">
                   &ldquo;{r.answerText}&rdquo;
                 </p>
-                <p className="text-sm text-gray-500">{r.feedback}</p>
+                <p className="text-sm text-gray-500 mb-3">{r.feedback}</p>
+
+                {r.mlQualityLabel && (
+                  <div
+                    className={`text-xs rounded-lg px-3 py-2 inline-flex items-center gap-2 ${ML_LABEL_STYLES[r.mlQualityLabel]}`}
+                  >
+                    <span className="font-medium">
+                      ML Model: {r.mlQualityLabel}
+                    </span>
+                    {r.mlConfidenceScore !== null && (
+                      <span className="opacity-75">
+                        ({Math.round(r.mlConfidenceScore * 100)}% confidence)
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
 
           <div className="flex gap-3">
-            <Link
-              href={`/practice/interview/${roleId}`}
+            <button
+              onClick={() => {
+                window.location.href = `/practice/interview/${roleId}`;
+              }}
               className="text-gray-700 px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-100"
             >
               Practice again
-            </Link>
+            </button>
             <Link
               href="/dashboard"
               className="text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:underline"

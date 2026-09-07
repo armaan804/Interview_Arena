@@ -2,7 +2,7 @@ const VALID_DIFFICULTIES = ["BEGINNER", "INTERMEDIATE", "ADVANCED"];
 const VALID_OPTIONS = ["A", "B", "C", "D"];
 const VALID_RATINGS = ["Strong", "Good", "Needs Improvement"];
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 // ---------- Shared Gemini caller (JSON mode, with retry on transient errors) ----------
 async function callGeminiJSON(prompt) {
