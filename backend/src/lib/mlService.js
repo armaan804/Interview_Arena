@@ -6,12 +6,16 @@ const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:8000";
  * alongside the LLM feedback — a failure here should never break the
  * interview flow).
  */
-async function scoreAnswerQuality(answerText, idealAnswer) {
+async function scoreAnswerQuality(answerText, idealAnswer, questionText) {
   try {
     const response = await fetch(`${ML_SERVICE_URL}/score`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answerText, idealAnswer: idealAnswer || undefined }),
+      body: JSON.stringify({
+        answerText,
+        idealAnswer: idealAnswer || undefined,
+        questionText: questionText || undefined,
+      }),
     });
 
     if (!response.ok) {

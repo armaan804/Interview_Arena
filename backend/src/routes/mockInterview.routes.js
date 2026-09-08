@@ -152,7 +152,11 @@ router.post("/finish", requireAuth, async (req, res) => {
 
       // Second opinion from our own trained ML model — independent of the
       // LLM. Failure here is non-fatal; the interview still completes.
-      const mlResult = await scoreAnswerQuality(response.answerText, question.idealAnswer);
+      const mlResult = await scoreAnswerQuality(
+        response.answerText,
+        question.idealAnswer,
+        question.questionText
+      );
 
       await prisma.interviewResponse.update({
         where: { id: response.id },
