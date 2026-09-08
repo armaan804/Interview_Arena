@@ -123,6 +123,7 @@ model InterviewResponse {
   question          SubjectiveQuestion   @relation(fields: [questionId], references: [id])
   answerText        String
   llmFeedback       String?
+  llmRating         String?
   mlQualityLabel    QualityLabel?
   mlConfidenceScore Float?
   createdAt         DateTime             @default(now())

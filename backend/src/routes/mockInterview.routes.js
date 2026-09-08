@@ -162,6 +162,7 @@ router.post("/finish", requireAuth, async (req, res) => {
         where: { id: response.id },
         data: {
           llmFeedback: feedback,
+          llmRating: rating,
           mlQualityLabel: mlResult?.qualityLabel || null,
           mlConfidenceScore: mlResult?.confidenceScore ?? null,
         },

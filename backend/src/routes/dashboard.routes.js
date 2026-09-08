@@ -109,11 +109,86 @@ router.get("/stats", requireAuth, async (req, res) => {
       }))
       .slice(-14);
 
+    // ================= MOCK INTERVIEW STATS =================
+    const sessions = await prisma.mockInterviewSession.findMany({
+      where: { userId },
+      include: {
+        role: true,
+        responses: {
+          where: { llmFeedback: { not: null } }, // only fully-evaluated answers
+          include: { question: true },
+        },
+      },
+      orderBy: { startedAt: "asc" },
+    });
+
+    const completedSessions = sessions.filter((s) => s.endedAt !== null);
+    const allResponses = sessions.flatMap((s) => s.responses);
+
+    // ---------- Overall rating breakdown (Gemini) ----------
+    const ratingCounts = { Strong: 0, Good: 0, "Needs Improvement": 0 };
+    for (const r of allResponses) {
+      if (r.llmRating && ratingCounts[r.llmRating] !== undefined) {
+        ratingCounts[r.llmRating]++;
+      }
+    }
+
+    // ---------- Overall ML quality breakdown (our own model) ----------
+    const mlQualityCounts = { GOOD: 0, AVERAGE: 0, WEAK: 0 };
+    for (const r of allResponses) {
+      if (r.mlQualityLabel && mlQualityCounts[r.mlQualityLabel] !== undefined) {
+        mlQualityCounts[r.mlQualityLabel]++;
+      }
+    }
+
+    // ---------- By role ----------
+    const interviewRoleMap = new Map();
+    for (const s of completedSessions) {
+      const key = s.roleId;
+      if (!interviewRoleMap.has(key)) {
+        interviewRoleMap.set(key, {
+          roleId: s.roleId,
+          roleName: s.role.name,
+          sessionsCompleted: 0,
+          questionsAnswered: 0,
+          ratingCounts: { Strong: 0, Good: 0, "Needs Improvement": 0 },
+        });
+      }
+      const entry = interviewRoleMap.get(key);
+      entry.sessionsCompleted++;
+      entry.questionsAnswered += s.responses.length;
+      for (const r of s.responses) {
+        if (r.llmRating && entry.ratingCounts[r.llmRating] !== undefined) {
+          entry.ratingCounts[r.llmRating]++;
+        }
+      }
+    }
+    const interviewByRole = Array.from(interviewRoleMap.values());
+
+    // ---------- Recent trend (sessions completed by day, last 14 days) ----------
+    const interviewDayMap = new Map();
+    for (const s of completedSessions) {
+      const day = s.endedAt.toISOString().slice(0, 10);
+      if (!interviewDayMap.has(day)) {
+        interviewDayMap.set(day, { date: day, sessions: 0 });
+      }
+      interviewDayMap.get(day).sessions++;
+    }
+    const interviewTrend = Array.from(interviewDayMap.values()).slice(-14);
+
     res.json({
       overall: { totalAttempts, correctAttempts, accuracyPct: overallAccuracyPct },
       byTopic,
       byRole,
       recentTrend,
+      mockInterview: {
+        totalSessions: completedSessions.length,
+        totalQuestionsAnswered: allResponses.length,
+        ratingCounts,
+        mlQualityCounts,
+        byRole: interviewByRole,
+        recentTrend: interviewTrend,
+      },
     });
   } catch (error) {
     console.error("Dashboard stats error:", error);

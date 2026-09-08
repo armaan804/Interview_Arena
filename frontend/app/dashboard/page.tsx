@@ -7,6 +7,7 @@ import TopicRadarChart from "@/components/dashboard/RadarChart";
 import TopicBreakdown from "@/components/dashboard/TopicBreakdown";
 import ReadinessScore from "@/components/dashboard/ReadinessScore";
 import TrendChart from "@/components/dashboard/TrendChart";
+import MockInterviewStats from "@/components/dashboard/MockInterviewStats";
 
 interface DashboardStats {
   overall: { totalAttempts: number; correctAttempts: number; accuracyPct: number };
@@ -28,6 +29,19 @@ interface DashboardStats {
     readinessScore: number;
   }[];
   recentTrend: { date: string; attempts: number; accuracyPct: number }[];
+  mockInterview: {
+    totalSessions: number;
+    totalQuestionsAnswered: number;
+    ratingCounts: { Strong: number; Good: number; "Needs Improvement": number };
+    mlQualityCounts: { GOOD: number; AVERAGE: number; WEAK: number };
+    byRole: {
+      roleId: string;
+      roleName: string;
+      sessionsCompleted: number;
+      questionsAnswered: number;
+      ratingCounts: { Strong: number; Good: number; "Needs Improvement": number };
+    }[];
+  };
 }
 
 function DashboardContent() {
@@ -58,7 +72,7 @@ function DashboardContent() {
     return <p className="text-sm text-red-600 px-4 py-12">{error}</p>;
   }
 
-  const { overall, byTopic, byRole, recentTrend } = stats;
+  const { overall, byTopic, byRole, recentTrend, mockInterview } = stats;
 
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-12">
@@ -121,6 +135,14 @@ function DashboardContent() {
             Topic-wise Breakdown
           </h2>
           <TopicBreakdown data={byTopic} />
+        </div>
+
+        {/* Mock interview performance */}
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <h2 className="font-medium text-gray-900 mb-4">
+            Mock Interview Performance
+          </h2>
+          <MockInterviewStats data={mockInterview} />
         </div>
       </div>
     </div>
